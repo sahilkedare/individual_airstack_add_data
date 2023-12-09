@@ -1,25 +1,19 @@
 import { useQuery } from "@airstack/airstack-react";
 
-const GET_VITALIK_LENS_FARCASTER_ENS = `
-query MyQuery {
-  Wallet(input: {identity: "vitalik.eth", blockchain: ethereum}) {
-    socials {
-      dappName
-      profileName
-    }
-    addresses
-  }
-}
-`;
 
 const Component = () => {
 
-  const address = `["0xd8da6bf26964af9d7eed9e03e53415d37aa96045","0xd27a8a44a2Ab3507C0949dFAf58bd9CF599E1D52"]`;
-  const eth_address = "0xd8da6bf26964af9d7eed9e03e53415d37aa96045";
+  const address = ["0xd8da6bf26964af9d7eed9e03e53415d37aa96045", "0xB0CCf43adA6CBaA26dcf4907117b496d49f74242"];
+  // const eth_address = "0xd8da6bf26964af9d7eed9e03e53415d37aa96045";
+
+  const temp = address.map((a) => `"${a}"`).join(",");
+  const compare = "_gt";
+  const followLimit = 1000;
+  // console.log(temp);
 
   const XMTP_QUERY = `
     query BulkFetchPrimaryENSandXMTP {
-        XMTPs(input: {blockchain: ALL, filter: {owner: {_in: ${address}}}}) {
+        XMTPs(input: {blockchain: ALL, filter: {owner: {_in: [${address.map((a) => `"${a}"`).join(",")}]}}}) {
         XMTP {
             isXMTPEnabled
             owner {
@@ -36,7 +30,7 @@ const Component = () => {
   const LENS_QUERY = `
     query GetAllSocials {
         Socials(
-        input: {filter: {userAssociatedAddresses: {_eq: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"}, dappName: {_eq: lens}}, blockchain: ethereum}
+        input: { blockchain: ethereum, filter: {userAssociatedAddresses: {_in: [${address.map((a) => `"${a}"`).join(",")}]}, dappName: {_eq: lens}, followerCount: {${compare}: ${followLimit}}}}
         ) {
         Social {
             blockchain
@@ -50,44 +44,25 @@ const Component = () => {
     `;
 
   const FARCASTER_QUERY = `
-    query GetAllSocials {
-        Socials(
-        input: {filter: {userAssociatedAddresses: {_eq: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"}, dappName: {_eq: farcaster}}, blockchain: ethereum}
-        ) {
-        Social {
-            blockchain
-            dappName
-            profileName
-            userAssociatedAddresses
-            followerCount
-        }
-        }
+  query GetAllSocials {
+    Socials(
+    input: { blockchain: ethereum, filter: {userAssociatedAddresses: {_in: [${address.map((a) => `"${a}"`).join(",")}]}, dappName: {_eq: farcaster}, followerCount: {${compare}: ${followLimit}}}}
+    ) {
+    Social {
+        blockchain
+        dappName
+        profileName
+        userAssociatedAddresses
+        followerCount
     }
-    `;
-
-  const compare = "_gt";
-    const FARCASTER_QUERY_test = `
-    query GetAllSocials {
-      Socials(
-        input: {filter: {userAssociatedAddresses: {_eq: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"}, dappName: {_eq: farcaster}, followingCount: {${compare}: 100}}, blockchain: ethereum}
-      ) {
-        Social {
-          blockchain
-          dappName
-          profileName
-          userAssociatedAddresses
-          followerCount
-        }
-      }
     }
-    `;
-
-    
+}
+`;
 
   const TOKEN_QUERY = ` 
 query tokens {
     erc20: TokenBalances(
-      input: {filter: {owner: {_in: ${address}}, tokenType: {_in: [ERC20]}}, limit: 10, blockchain: ethereum}
+      input: {filter: {owner: {_in: [${address.map((a) => `"${a}"`).join(",")}]}, tokenType: {_in: [ERC20]}}, limit: 10, blockchain: ethereum}
     ) {
       data:TokenBalance {
         amount
@@ -206,7 +181,7 @@ erc6551: TokenBalances(
   }`;
 
 
-  const { data, loading, error } = useQuery(TOKEN_QUERY, { cache: false });
+  // const { data, loading, error } = useQuery(TOKEN_QUERY, { cache: false });
 
   const { data: xmtp_data, loading: xmtp_loading, error: xmtp_error } = useQuery(XMTP_QUERY, { cache: false });
 
@@ -215,48 +190,48 @@ erc6551: TokenBalances(
   const { data: farcaster_data, loading: farcaster_loading, error: farcaster_error } = useQuery(FARCASTER_QUERY, { cache: false });
 
 
-  if (loading) {
+  if (farcaster_loading) {
     return <p>Loading...</p>;
   }
 
-  if (error) {
-    return <p>Error: {error.message}</p>;
+  if (farcaster_error) {
+    return <p>Error: {farcaster_error.message}</p>;
   }
 
   const submit = () => {
-    console.log(data, "nft_dataa");
-    console.log(xmtp_data, "xmtp_dataa");
-    console.log(lens_data, "lens_dataa");
+    // console.log(data, "nft_dataa");
+    // console.log(xmtp_data, "xmtp_dataa");
+    // console.log(lens_data, "lens_dataa");
     console.log(farcaster_data, "farcaster_dataa");
 
-    let totatScore = 0; 
+    let totatScore = 0;
 
     // check if xmtp enabled
-    const isXMTPEnabled = data.XMTPs?.XMTP[0].isXMTPEnabled;
+    // const isXMTPEnabled = data.XMTPs?.XMTP[0].isXMTPEnabled;
 
-    // check lens follower
-    const lensFollowers = data.Socials?.Social[0].followerCount;
+    // // check lens follower
+    // const lensFollowers = data.Socials?.Social[0].followerCount;
 
-    // check farcaster follower
-    const FarcasterFollowers = data.Socials?.Social[0].followerCount;
+    // // check farcaster follower
+    // const FarcasterFollowers = data.Socials?.Social[0].followerCount;
 
-    // check token data
-    const erc20 = data.erc20.data.reduce((sum, item) => sum + item.formattedAmount, 0);
+    // // check token data
+    // const erc20 = data.erc20.data.reduce((sum, item) => sum + item.formattedAmount, 0);
 
-    const erc1155 = data.erc1155.data.reduce((sum, item) => sum + parseInt(item.formattedAmount), 0);
+    // const erc1155 = data.erc1155.data.reduce((sum, item) => sum + parseInt(item.formattedAmount), 0);
 
-    const erc721 = data.erc721.data.reduce((sum, item) => sum + parseInt(item.formattedAmount), 0);
+    // const erc721 = data.erc721.data.reduce((sum, item) => sum + parseInt(item.formattedAmount), 0);
 
-    const erc6551 = data.erc6551.data.reduce((sum, item) => sum + parseInt(item.formattedAmount), 0);
+    // const erc6551 = data.erc6551.data.reduce((sum, item) => sum + parseInt(item.formattedAmount), 0);
 
-    const poap = data.poap.data.reduce((sum, item) => sum + parseFloat(item.amount), 0); 
+    // const poap = data.poap.data.reduce((sum, item) => sum + parseFloat(item.amount), 0); 
 
-    if(isXMTPEnabled) {
-      totatScore+=1;
-    }
-    totatScore = lensFollowers+ FarcasterFollowers+ erc20+ erc721+ erc1155+erc6551 +poap;
-    totatScore = totatScore/8;
-   
+    // if(isXMTPEnabled) {
+    //   totatScore+=1;
+    // }
+    // totatScore = lensFollowers+ FarcasterFollowers+ erc20+ erc721+ erc1155+erc6551 +poap;
+    // totatScore = totatScore/8;
+
   }
 
   return (
@@ -297,7 +272,7 @@ erc6551: TokenBalances(
 
   // Render your component using the data returned by the query
   // console.log(farcaster_data, "dataa");
-  
+
 };
 
 export default Component;
